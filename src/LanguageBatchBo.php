@@ -2,6 +2,8 @@
 
 namespace Language;
 
+use Language\Api\SystemApi;
+
 /**
  * Business logic related to generating language files.
  */
@@ -52,15 +54,7 @@ class LanguageBatchBo
 	protected static function getLanguageFile($application, $language)
 	{
 		$result = false;
-		$languageResponse = ApiCall::call(
-			'system_api',
-			'language_api',
-			array(
-				'system' => 'LanguageFiles',
-				'action' => 'getLanguageFile'
-			),
-			array('language' => $language)
-		);
+		$languageResponse = SystemApi::getLanguageFile($language);
 
 		try {
 			self::checkForApiErrorResult($languageResponse);
@@ -146,15 +140,7 @@ class LanguageBatchBo
 	 */
 	protected static function getAppletLanguages($applet)
 	{
-		$result = ApiCall::call(
-			'system_api',
-			'language_api',
-			array(
-				'system' => 'LanguageFiles',
-				'action' => 'getAppletLanguages'
-			),
-			array('applet' => $applet)
-		);
+		$result = SystemApi::getAppletLanguages($applet);
 
 		try {
 			self::checkForApiErrorResult($result);
@@ -177,18 +163,7 @@ class LanguageBatchBo
 	 */
 	protected static function getAppletLanguageFile($applet, $language)
 	{
-		$result = ApiCall::call(
-			'system_api',
-			'language_api',
-			array(
-				'system' => 'LanguageFiles',
-				'action' => 'getAppletLanguageFile'
-			),
-			array(
-				'applet' => $applet,
-				'language' => $language
-			)
-		);
+		$result = SystemApi::getAppletLanguageFile($applet, $language);
 
 		try {
 			self::checkForApiErrorResult($result);
