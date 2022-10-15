@@ -2,6 +2,8 @@
 
 namespace Language\Api;
 
+use Language\Api\Processor\ApiResponseProcessor;
+use Language\Api\Response\ApiResponseInterface;
 use Language\ApiCall;
 use ReflectionClass;
 
@@ -35,19 +37,21 @@ abstract class AbstractApi implements ApiInterface
         return static::$modeList;
     }
 
-    protected static function call(ApiConfiguration $config)
+    protected static function call(ApiConfiguration $config): ApiResponseInterface
     {
         $getParameters = $config->getGetParameters();
 
         $getParameters[static::PARAMETER_ACTION] = $config->getAction();
         $getParameters[static::PARAMETER_SYSTEM] = $config->getSystem();
 
-        return ApiCall::call(
+        $result = ApiCall::call(
             $config->getApiName(),
             $config->getMode(),
             $getParameters,
             $config->getPostParameters()
         );
+
+        return ApiResponseProcessor::process($result);
     }
 
     protected static function createConfig()

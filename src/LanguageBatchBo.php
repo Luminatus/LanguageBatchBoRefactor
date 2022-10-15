@@ -2,6 +2,10 @@
 
 namespace Language;
 
+use Language\Api\ApiResultInterface;
+use Language\Api\Response\ApiErrorInterface;
+use Language\Api\Response\ApiResponseInterface;
+use Language\Api\Response\Definition\NoResponseErrorDefinition;
 use Language\Api\SystemApi;
 
 /**
@@ -54,11 +58,10 @@ class LanguageBatchBo
 	{
 		$result = false;
 		$languageResponse = SystemApi::getLanguageFile($language);
+		$languageResponse = new NoResponseErrorDefinition();
 
-		try {
-			self::checkForApiErrorResult($languageResponse);
-		} catch (\Exception $e) {
-			throw new \Exception('Error during getting language file: (' . $application . '/' . $language . ')');
+		if ($languageResponse instanceof ApiErrorInterface) {
+			throw new \Exception('Error during getting language file: (' . $application . '/' . $language . '): ' . static::generateApiException($languageResponse)->getMessage());
 		}
 
 		// If we got correct data we store it.
@@ -69,7 +72,7 @@ class LanguageBatchBo
 			mkdir(dirname($destination), 0755, true);
 		}
 
-		$result = file_put_contents($destination, $languageResponse['data']);
+		$result = file_put_contents($destination, $languageResponse->getContent());
 
 		return (bool)$result;
 	}
@@ -138,13 +141,11 @@ class LanguageBatchBo
 	{
 		$result = SystemApi::getAppletLanguages($applet);
 
-		try {
-			self::checkForApiErrorResult($result);
-		} catch (\Exception $e) {
-			throw new \Exception('Getting languages for applet (' . $applet . ') was unsuccessful ' . $e->getMessage());
+		if ($result instanceof ApiErrorInterface) {
+			throw new \Exception('Getting languages for applet (' . $applet . ') was unsuccessful ' . static::generateApiException($result)->getMessage());
 		}
 
-		return $result['data'];
+		return $result->getContent();
 	}
 
 
@@ -160,41 +161,26 @@ class LanguageBatchBo
 	{
 		$result = SystemApi::getAppletLanguageFile($applet, $language);
 
-		try {
-			self::checkForApiErrorResult($result);
-		} catch (\Exception $e) {
-			throw new \Exception('Getting language xml for applet: (' . $applet . ') on language: (' . $language . ') was unsuccessful: '
-				. $e->getMessage());
+		if ($result instanceof ApiErrorInterface) {
+			throw new \Exception('Getting language xml for applet: (' . $applet . ') on language: (' . $language . ') was unsuccessful:' . static::generateApiException($result)->getMessage());
 		}
 
-		return $result['data'];
+		return $result->getContent();
 	}
 
 	/**
 	 * Checks the api call result.
 	 *
-	 * @param mixed  $result   The api call result to check.
+	 * @param ApiErrorInterface  $result   The api call result to check.
 	 *
-	 * @throws Exception   If the api call was not successful.
+	 * @return Exception   If the api call was not successful.
 	 *
-	 * @return void
 	 */
-	protected static function checkForApiErrorResult($result)
+	protected static function generateApiException(ApiErrorInterface $result): \Exception
 	{
-		// Error during the api call.
-		if ($result === false || !isset($result['status'])) {
-			throw new \Exception('Error during the api call');
-		}
-		// Wrong response.
-		if ($result['status'] != 'OK') {
-			throw new \Exception('Wrong response: '
-				. (!empty($result['error_type']) ? 'Type(' . $result['error_type'] . ') ' : '')
-				. (!empty($result['error_code']) ? 'Code(' . $result['error_code'] . ') ' : '')
-				. ((string)$result['data']));
-		}
-		// Wrong content.
-		if ($result['data'] === false) {
-			throw new \Exception('Wrong content!');
-		}
+		return new \Exception('Wrong response: '
+			. (!empty($result->getErrorType()) ? 'Type(' . $result->getErrorType() . ') ' : '')
+			. (!empty($result->getErrorCode()) ? 'Code(' . $result->getErrorCode() . ') ' : '')
+			. ((string)$result->getContent()));
 	}
 }
