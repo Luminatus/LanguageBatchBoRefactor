@@ -4,7 +4,7 @@ namespace Language\Api\Response\Definition;
 
 use Language\Api\Response\ApiErrorInterface;
 
-class EmptyResponseErrorDefinition implements ApiErrorInterface
+class EmptyContentErrorDefinition implements ApiErrorInterface
 {
     public function getStatus(): string
     {
@@ -36,7 +36,7 @@ class EmptyResponseErrorDefinition implements ApiErrorInterface
         return [
             'error_code' => $this->getErrorCode(),
             'error_type' => $this->getErrorType(),
-            'data' => $this->getData()
+            'data' => $this->getContent()
         ];
     }
 }

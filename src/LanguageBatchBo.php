@@ -2,11 +2,11 @@
 
 namespace Language;
 
-use Language\Api\ApiResultInterface;
 use Language\Api\Response\ApiErrorInterface;
-use Language\Api\Response\ApiResponseInterface;
-use Language\Api\Response\Definition\NoResponseErrorDefinition;
 use Language\Api\SystemApi;
+use Language\Exception\AppletLanguageFileApiException;
+use Language\Exception\AppletLanguagesApiException;
+use Language\Exception\LanguageFileApiException;
 
 /**
  * Business logic related to generating language files.
@@ -58,10 +58,9 @@ class LanguageBatchBo
 	{
 		$result = false;
 		$languageResponse = SystemApi::getLanguageFile($language);
-		$languageResponse = new NoResponseErrorDefinition();
 
 		if ($languageResponse instanceof ApiErrorInterface) {
-			throw new \Exception('Error during getting language file: (' . $application . '/' . $language . '): ' . static::generateApiException($languageResponse)->getMessage());
+			throw new LanguageFileApiException($application, $language, $languageResponse);
 		}
 
 		// If we got correct data we store it.
@@ -142,7 +141,7 @@ class LanguageBatchBo
 		$result = SystemApi::getAppletLanguages($applet);
 
 		if ($result instanceof ApiErrorInterface) {
-			throw new \Exception('Getting languages for applet (' . $applet . ') was unsuccessful ' . static::generateApiException($result)->getMessage());
+			throw new AppletLanguagesApiException($applet, $result);
 		}
 
 		return $result->getContent();
@@ -162,25 +161,9 @@ class LanguageBatchBo
 		$result = SystemApi::getAppletLanguageFile($applet, $language);
 
 		if ($result instanceof ApiErrorInterface) {
-			throw new \Exception('Getting language xml for applet: (' . $applet . ') on language: (' . $language . ') was unsuccessful:' . static::generateApiException($result)->getMessage());
+			throw new AppletLanguageFileApiException($applet, $language, $result);
 		}
 
 		return $result->getContent();
-	}
-
-	/**
-	 * Checks the api call result.
-	 *
-	 * @param ApiErrorInterface  $result   The api call result to check.
-	 *
-	 * @return Exception   If the api call was not successful.
-	 *
-	 */
-	protected static function generateApiException(ApiErrorInterface $result): \Exception
-	{
-		return new \Exception('Wrong response: '
-			. (!empty($result->getErrorType()) ? 'Type(' . $result->getErrorType() . ') ' : '')
-			. (!empty($result->getErrorCode()) ? 'Code(' . $result->getErrorCode() . ') ' : '')
-			. ((string)$result->getContent()));
 	}
 }
