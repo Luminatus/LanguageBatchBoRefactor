@@ -9,6 +9,8 @@ class ApiConfiguration
     protected $mode;
     protected $action;
 
+    protected $responseType;
+
     protected $getParameters;
     protected $postParameters;
 
@@ -37,6 +39,10 @@ class ApiConfiguration
     public function getPostParameters(): array
     {
         return $this->postParameters;
+    }
+    public function getResponseType(): ?string
+    {
+        return $this->responseType;
     }
 
 
@@ -69,6 +75,11 @@ class ApiConfiguration
     public function setPostParameters(array $postParameters)
     {
         $this->postParameters = $postParameters;
+        return $this;
+    }
+    public function setResponseType(string $responseType)
+    {
+        $this->responseType = $responseType;
         return $this;
     }
 }

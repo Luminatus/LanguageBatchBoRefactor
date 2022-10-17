@@ -3,6 +3,7 @@
 namespace Language\Api\Response\Definition;
 
 use Language\Api\Response\ApiErrorInterface;
+use Language\File\FileType;
 
 class EmptyContentErrorDefinition implements ApiErrorInterface
 {
@@ -38,5 +39,10 @@ class EmptyContentErrorDefinition implements ApiErrorInterface
             'error_type' => $this->getErrorType(),
             'data' => $this->getContent()
         ];
+    }
+
+    public function getType(): string
+    {
+        return FileType::TYPE_RAW;
     }
 }

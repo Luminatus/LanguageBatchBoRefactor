@@ -3,10 +3,15 @@
 namespace Language;
 
 use Language\Api\Response\ApiErrorInterface;
+use Language\Api\Response\ApiResponseInterface;
 use Language\Api\SystemApi;
 use Language\Exception\AppletLanguageFileApiException;
 use Language\Exception\AppletLanguagesApiException;
 use Language\Exception\LanguageFileApiException;
+use Language\File\FileType;
+use Language\File\PathBuilder;
+use Language\File\PathWriter;
+use Language\File\WriterInterface;
 
 /**
  * Business logic related to generating language files.
@@ -18,11 +23,12 @@ class LanguageBatchBo
 	 *
 	 * @var array
 	 */
-	protected static $applications = array();
+	protected static $applications = [];
 
 	/**
 	 * Starts the language file generation.
 	 *
+	 * @throws Exception
 	 * @return void
 	 */
 	public static function generateLanguageFiles()
@@ -51,6 +57,7 @@ class LanguageBatchBo
 	 * @param string $language      The identifier of the language.
 	 *
 	 * @throws CurlException   If there was an error during the download of the language file.
+	 * @throws LanguageFileApiException
 	 *
 	 * @return bool   The success of the operation.
 	 */
@@ -64,28 +71,14 @@ class LanguageBatchBo
 		}
 
 		// If we got correct data we store it.
-		$destination = self::getLanguageCachePath($application) . $language . '.php';
+		$pathBuilder = PathBuilder::cache()->dir($application)->file($language, FileType::EXTENSIONS[$languageResponse->getType()]);
 		// If there is no folder yet, we'll create it.
-		var_dump($destination);
-		if (!is_dir(dirname($destination))) {
-			mkdir(dirname($destination), 0755, true);
-		}
+		$pathWriter = new PathWriter($pathBuilder);
+		$pathWriter->setFlags(WriterInterface::FLAG_GENERATE_DIRECTORIES | WriterInterface::FLAG_OVERWRITE);
 
-		$result = file_put_contents($destination, $languageResponse->getContent());
+		$result = $pathWriter->write($languageResponse->getContent());
 
 		return (bool)$result;
-	}
-
-	/**
-	 * Gets the directory of the cached language files.
-	 *
-	 * @param string $application   The application.
-	 *
-	 * @return string   The directory of the cached language files.
-	 */
-	protected static function getLanguageCachePath($application)
-	{
-		return Config::get('system.paths.root') . '/cache/' . $application . '/';
 	}
 
 	/**
@@ -98,29 +91,31 @@ class LanguageBatchBo
 	public static function generateAppletLanguageXmlFiles()
 	{
 		// List of the applets [directory => applet_id].
-		$applets = array(
-			'memberapplet' => 'JSM2_MemberApplet',
-		);
+		$applets = static::getAppletList();
 
 		echo "\nGetting applet language XMLs..\n";
 
 		foreach ($applets as $appletDirectory => $appletLanguageId) {
 			echo " Getting > $appletLanguageId ($appletDirectory) language xmls..\n";
 			$languages = self::getAppletLanguages($appletLanguageId);
-			if (empty($languages)) {
-				throw new \Exception('There is no available languages for the ' . $appletLanguageId . ' applet.');
+			if (empty($languages->getContent())) {
+				throw new \Exception("There is no available languages for the $appletLanguageId applet.");
 			} else {
-				echo ' - Available languages: ' . implode(', ', $languages) . "\n";
+				echo ' - Available languages: ' . implode(', ', $languages->getContent()) . "\n";
 			}
-			$path = Config::get('system.paths.root') . '/cache/flash';
+
+			$pathBuilder = PathBuilder::cache()->dir('flash');
+			$pathWriter = new PathWriter($pathBuilder);
+			$pathWriter->setFlags(WriterInterface::FLAG_OVERWRITE, WriterInterface::FLAG_CHECK_LENGTH);
+
 			foreach ($languages as $language) {
-				$xmlContent = self::getAppletLanguageFile($appletLanguageId, $language);
-				$xmlFile    = $path . '/lang_' . $language . '.xml';
-				if (strlen($xmlContent) == file_put_contents($xmlFile, $xmlContent)) {
-					echo " OK saving $xmlFile was successful.\n";
+				$languageFile = self::getAppletLanguageFile($appletLanguageId, $language);
+				$pathBuilder->file("lang_$language", FileType::EXTENSIONS[$languageFile->getType()]);
+
+				if ($pathWriter->write($languageFile->getContent())) {
+					echo "OK saving {$pathBuilder->getPath()} was successful.\n";
 				} else {
-					throw new \Exception('Unable to save applet: (' . $appletLanguageId . ') language: (' . $language
-						. ') xml (' . $xmlFile . ')!');
+					throw new \Exception("Unable to save applet: ($appletLanguageId) language: ($language) xml ({$pathBuilder->getPath()})!");
 				}
 			}
 			echo " < $appletLanguageId ($appletDirectory) language xml cached.\n";
@@ -134,9 +129,11 @@ class LanguageBatchBo
 	 *
 	 * @param string $applet   The applet identifier.
 	 *
-	 * @return array   The list of the available applet languages.
+	 * @throws AppletLanguagesApiException
+	 * 
+	 * @return ApiResponseInterface The API response containing the list of the available applet languages.
 	 */
-	protected static function getAppletLanguages($applet)
+	protected static function getAppletLanguages(string $applet): ApiResponseInterface
 	{
 		$result = SystemApi::getAppletLanguages($applet);
 
@@ -144,7 +141,7 @@ class LanguageBatchBo
 			throw new AppletLanguagesApiException($applet, $result);
 		}
 
-		return $result->getContent();
+		return $result;
 	}
 
 
@@ -153,8 +150,10 @@ class LanguageBatchBo
 	 *
 	 * @param string $applet      The identifier of the applet.
 	 * @param string $language    The language identifier.
+	 * 
+	 * @throws AppletLanguageFileApiException
 	 *
-	 * @return string|false   The content of the language file or false if weren't able to get it.
+	 * @return ApiResponseInterface  The API response with the content of the language file or an error response if weren't able to get it.
 	 */
 	protected static function getAppletLanguageFile($applet, $language)
 	{
@@ -164,6 +163,18 @@ class LanguageBatchBo
 			throw new AppletLanguageFileApiException($applet, $language, $result);
 		}
 
-		return $result->getContent();
+		return $result;
+	}
+
+	/**
+	 * Gets the list of applets
+	 *
+	 * @return array  The list of available applets
+	 */
+	protected static function getAppletList(): array
+	{
+		return [
+			'memberapplet' => 'JSM2_MemberApplet',
+		];
 	}
 }

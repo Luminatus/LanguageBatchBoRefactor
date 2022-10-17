@@ -3,6 +3,7 @@
 namespace Language\Api\Response\Definition;
 
 use Language\Api\Response\ApiErrorInterface;
+use Language\File\FileType;
 
 class NoResponseErrorDefinition implements ApiErrorInterface
 {
@@ -38,5 +39,10 @@ class NoResponseErrorDefinition implements ApiErrorInterface
             'error_type' => $this->getErrorType(),
             'data' => $this->getContent()
         ];
+    }
+
+    public function getType(): string
+    {
+        return FileType::TYPE_RAW;
     }
 }

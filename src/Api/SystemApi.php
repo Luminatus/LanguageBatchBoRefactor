@@ -2,6 +2,9 @@
 
 namespace Language\Api;
 
+use Language\Api\Response\ApiResponse;
+use Language\File\FileType;
+
 final class SystemApi extends AbstractApi
 {
     const API_NAME = 'system_api';
@@ -27,7 +30,8 @@ final class SystemApi extends AbstractApi
             ->setMode(static::MODE_LANGUAGE)
             ->setSystem(static::SYSTEM_LANGUAGE)
             ->setGetParameters($getParameters)
-            ->setPostParameters($postParameters);
+            ->setPostParameters($postParameters)
+            ->setResponseType(FileType::TYPE_PHP);
 
         return static::call($config);
     }
@@ -58,7 +62,8 @@ final class SystemApi extends AbstractApi
             ->setMode(static::MODE_LANGUAGE)
             ->setSystem(static::SYSTEM_LANGUAGE)
             ->setGetParameters($getParameters)
-            ->setPostParameters($postParameters);
+            ->setPostParameters($postParameters)
+            ->setResponseType(FileType::TYPE_XML);
 
         return static::call($config);
     }

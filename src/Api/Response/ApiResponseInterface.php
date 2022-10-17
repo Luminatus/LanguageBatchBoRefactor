@@ -8,4 +8,5 @@ interface ApiResponseInterface
     public function getContent();
     public function getStatus(): ?string;
     public function getRawData();
+    public function getType(): string;
 }

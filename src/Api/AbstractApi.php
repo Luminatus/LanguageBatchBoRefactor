@@ -51,7 +51,7 @@ abstract class AbstractApi implements ApiInterface
             $config->getPostParameters()
         );
 
-        return ApiResponseProcessor::process($result);
+        return ApiResponseProcessor::process($result, $config);
     }
 
     protected static function createConfig()
